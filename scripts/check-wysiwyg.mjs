@@ -576,6 +576,20 @@ console.log('wysiwyg markdown input rules: OK');
   });
   const after = module.__test.getStore().docs.map((item) => item.id).join(',');
   assert.notEqual(after, before, 'dragging a tab over another reorders the tabs live');
+
+  // Closing a non-empty tab asks for confirmation with exactly two actions.
+  const closeButtons = [...container.querySelectorAll('.madedown-tab__close')];
+  await act(async () => closeButtons[closeButtons.length - 1].dispatchEvent(new windowObject.MouseEvent('click', { bubbles: true })));
+  const closeMenu = container.querySelector('.madedown-menu');
+  assert.ok(closeMenu, 'closing a non-empty tab opens the confirmation menu');
+  const closeActions = [...closeMenu.querySelectorAll('.madedown-menu__btn')];
+  assert.equal(closeActions.length, 2, 'close confirmation has two actions');
+  assert.match(closeActions[0].textContent, /tab\.saveBeforeClose/);
+  assert.match(closeActions[1].textContent, /tab\.closeAction/);
+  assert.equal(closeActions[1].getAttribute('data-danger'), 'true', 'close action uses danger styling');
+  await act(async () => closeActions[1].dispatchEvent(new windowObject.MouseEvent('click', { bubbles: true })));
+  assert.equal(container.querySelector('.madedown-menu'), null, 'close confirmation dismisses');
+
   await act(async () => root.unmount());
   container.remove();
 }

@@ -9,12 +9,13 @@
  * - the `madedown` agent tool (read / write / append / replace / list / select /
  *   create / open);
  * - same-origin HTTP routes for the browser editor (`/state`, `/doc`,
- *   `/update`, `/tabs`, `/export`, `/open`, `/diag`);
+ *   `/update`, `/tabs`, `/export`, `/save-dialog`, `/open`, `/diag`);
  * - a system-prompt section listing the tabs and inlining the active document.
  *
  * `POST /export` is the user-facing "save to a local file" action: it writes
  * the active (or named) document as UTF-8 Markdown anywhere the user points it.
  */
+import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -859,6 +860,47 @@ function route(path, handler, kind = 'exact') {
 }
 
 /**
+ * Show the native macOS save panel and resolve the chosen file path.
+ * Falls back to `{ok:false, unsupported:true}` on non-macOS hosts so the editor
+ * can use its in-page path prompt instead.
+ * @param defaultName - suggested file name shown in the panel.
+ * @returns `{ok:true,path}` | `{ok:false,canceled:true}` | `{ok:false,error}`.
+ */
+function chooseSavePath(defaultName) {
+  return new Promise((resolve) => {
+    if (process.platform !== 'darwin') {
+      resolve({ ok: false, unsupported: true });
+      return;
+    }
+    const name = String(defaultName || 'Madedown.md')
+      .replace(/['"\\/:*?<>|\n\r]/g, '-')
+      .trim() || 'Madedown.md';
+    const script = [
+      'try',
+      `  set targetFile to choose file name with prompt "保存到本地" default name "${name}" default location (path to documents folder)`,
+      '  return POSIX path of targetFile',
+      'on error number -128',
+      '  return ""',
+      'end try',
+    ].join('\n');
+    execFile('/usr/bin/osascript', ['-e', script], { timeout: 300000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+      const output = String(stdout || '').trim();
+      if (output.length > 0) {
+        resolve({ ok: true, path: output });
+        return;
+      }
+      if (error) {
+        const text = `${stderr || ''}\n${error.message || ''}`.trim();
+        if (/User canceled|取消|-128/i.test(text)) resolve({ ok: false, canceled: true });
+        else resolve({ ok: false, error: text || 'save dialog failed' });
+        return;
+      }
+      resolve({ ok: false, canceled: true });
+    });
+  });
+}
+
+/**
  * Host plugin body.
  * @param ctx - host Cordis context.
  */
@@ -951,6 +993,27 @@ export function apply(ctx) {
         }
         const body = await readJsonBody(request);
         sendJson(response, 200, service.exportDocument(body));
+      }),
+      route(`${API}/save-dialog`, async (request, response) => {
+        if (request.method !== 'POST') {
+          sendJson(response, 405, { ok: false, error: 'use POST' });
+          return;
+        }
+        const body = await readJsonBody(request);
+        const value = typeof body === 'object' && body !== null ? body : {};
+        const target = service.read(value.docId);
+        if (!target || target.ok !== true) {
+          sendJson(response, 200, { ok: false, error: 'document not found' });
+          return;
+        }
+        const chosen = await chooseSavePath(value.defaultName || `${target.title}.md`);
+        if (!chosen || chosen.ok !== true) {
+          sendJson(response, 200, chosen || { ok: false, canceled: true });
+          return;
+        }
+        const saved = service.exportDocument({ docId: target.documentId, path: chosen.path });
+        if (saved && saved.ok === true) saved.chosenPath = chosen.path;
+        sendJson(response, 200, saved);
       }),
       route(`${API}/open`, (request, response) => {
         if (request.method !== 'POST') {

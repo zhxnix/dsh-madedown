@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+- Saving to a local file now opens the native macOS save panel instead of an in-page path prompt (in-page prompt remains as a non-macOS fallback).
+- Closing a non-empty tab now offers exactly two actions: **Save locally** and **Close anyway** (red); the close confirmation explains that unsaved content cannot be recovered.
+
 ## 0.6.0
 
 - Table editing: a contextual toolbar for inserting rows/columns and deleting rows, columns, or the whole table; Tab in the last cell adds a row.
