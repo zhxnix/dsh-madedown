@@ -51,7 +51,27 @@ function createBundle() {
       return 1;
     },
     cancelAnimationFrame: () => {},
-    fetch: async () => ({ ok: true, json: async () => ({ ok: true, changed: false, version: 0, openRequest: 0 }) }),
+    fetch: async (url) => {
+      const href = String(url || '');
+      if (href.includes('/update-check')) {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            current: '0.6.1',
+            latest: '0.6.2',
+            hasUpdate: true,
+            releaseUrl: 'https://github.com/zhxnix/dsh-madedown/releases/tag/v0.6.2',
+            publishedAt: '2026-11-02T00:00:00Z',
+            notes: '',
+          }),
+        };
+      }
+      if (href.includes('/update-plugin')) {
+        return { ok: true, json: async () => ({ ok: true, method: 'git', version: '0.6.2', needsRestart: true, output: '' }) };
+      }
+      return { ok: true, json: async () => ({ ok: true, changed: false, version: 0, openRequest: 0 }) };
+    },
     FileReader: windowObject.FileReader,
     URL: windowObject.URL,
     TextDecoder: windowObject.TextDecoder,
@@ -565,6 +585,26 @@ console.log('wysiwyg markdown input rules: OK');
   const aboutClose = container.querySelector('.madedown-aboutcard__close');
   await act(async () => aboutClose.dispatchEvent(new windowObject.MouseEvent('click', { bubbles: true })));
   assert.equal(container.querySelector('.madedown-aboutcard'), null, 'About dialog closes again');
+
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  const updateHint = container.querySelector('.madedown-update-hint');
+  assert.ok(updateHint, 'status bar shows the new-version hint');
+  assert.match(updateHint.textContent, /update\.available/);
+  await act(async () => updateHint.dispatchEvent(new windowObject.MouseEvent('click', { bubbles: true })));
+  assert.ok(container.querySelector('.madedown-aboutcard__update'), 'update row appears in the About dialog');
+  const updateNow = container.querySelector('.madedown-aboutcard__update-btn[data-primary="true"]');
+  assert.ok(updateNow, 'About dialog offers the update action');
+  await act(async () => updateNow.dispatchEvent(new windowObject.MouseEvent('click', { bubbles: true })));
+  for (let tick = 0; tick < 5; tick += 1) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    });
+  }
+  assert.match(container.querySelector('.madedown-aboutcard__update-text').textContent, /update\.done/, 'update action reports success');
+  const aboutClose2 = container.querySelector('.madedown-aboutcard__close');
+  await act(async () => aboutClose2.dispatchEvent(new windowObject.MouseEvent('click', { bubbles: true })));
 
   const tabs = [...container.querySelectorAll('.madedown-tab')];
   windowObject.document.elementFromPoint = () => tabs[2];

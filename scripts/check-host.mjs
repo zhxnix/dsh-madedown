@@ -24,7 +24,7 @@ const legacy = {
 };
 writeFileSync(join(home, 'document.json'), `${JSON.stringify(legacy, null, 2)}\n`);
 
-const { apply, createMadedownService, measureText } = await import('../impl.js');
+const { apply, createMadedownService, measureText, normalizeVersion, compareVersions } = await import('../impl.js');
 
 const tools = [];
 const routes = [];
@@ -62,14 +62,22 @@ apply(ctx);
 assert.equal(tools.length, 1, 'registers exactly one tool');
 assert.equal(tools[0].name, 'madedown');
 assert.deepEqual(tools[0].parameters.properties.action.enum, ['read', 'write', 'append', 'replace', 'open', 'list', 'select', 'create', 'close']);
-assert.equal(routes.length, 10, 'registers ten HTTP routes');
+assert.equal(routes.length, 12, 'registers twelve HTTP routes');
 assert.ok(routes.some((entry) => entry.path === '/madedown-dsh/save-dialog'), 'registers the native save dialog route');
+assert.ok(routes.some((entry) => entry.path === '/madedown-dsh/update-check'), 'registers the update check route');
+assert.ok(routes.some((entry) => entry.path === '/madedown-dsh/update-plugin'), 'registers the update plugin route');
 assert.equal(sections.length, 1, 'registers one prompt section');
 const prompt = sections[0].text();
 assert.match(prompt, /Madedown sidebar editor/);
 assert.match(prompt, /Tabs \(1\)/);
 assert.match(prompt, /Legacy notes/);
 assert.match(prompt, /Migrated body/);
+
+assert.equal(normalizeVersion('v0.6.2').text, '0.6.2');
+assert.equal(compareVersions('v0.6.2', '0.6.1'), 1);
+assert.equal(compareVersions('0.6.2', 'v0.6.2'), 0);
+assert.equal(compareVersions('0.6.1', '0.7.0'), -1);
+assert.equal(compareVersions('1.0.0-rc.1', '1.0.0'), -1);
 
 const tool = tools[0];
 const call = (args) => tool.execute(args, {});

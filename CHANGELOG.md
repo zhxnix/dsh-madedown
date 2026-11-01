@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2
+
+- The About dialog can check the latest GitHub release and update the plugin to it (git checkout: fast-forward pull; npm installs: best-effort `dsh plugin add`; a restart is required).
+- When a newer release exists, the status bar shows a small "new version" hint that opens the About dialog.
+
 ## 0.6.1
 
 - Saving to a local file now opens the native macOS save panel instead of an in-page path prompt (in-page prompt remains as a non-macOS fallback).

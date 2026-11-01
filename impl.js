@@ -9,7 +9,7 @@
  * - the `madedown` agent tool (read / write / append / replace / list / select /
  *   create / open);
  * - same-origin HTTP routes for the browser editor (`/state`, `/doc`,
- *   `/update`, `/tabs`, `/export`, `/save-dialog`, `/open`, `/diag`);
+ *   `/update`, `/tabs`, `/export`, `/save-dialog`, `/update-check`, `/update-plugin`, `/open`, `/diag`);
  * - a system-prompt section listing the tabs and inlining the active document.
  *
  * `POST /export` is the user-facing "save to a local file" action: it writes
@@ -20,6 +20,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, extname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const name = 'dsh-madedown';
 export const inject = ['tools', 'webServer', 'systemPrompt'];
@@ -859,6 +860,167 @@ function route(path, handler, kind = 'exact') {
   };
 }
 
+/** GitHub repository that publishes this plugin. */
+const PLUGIN_REPO = 'zhxnix/dsh-madedown';
+/** Host package root (also the bundle directory). */
+const PLUGIN_ROOT = dirname(fileURLToPath(import.meta.url));
+/** Local package.json path. */
+const PLUGIN_PACKAGE_PATH = join(PLUGIN_ROOT, 'package.json');
+/** How long a GitHub release lookup is reused. */
+const UPDATE_CACHE_MS = 10 * 60 * 1000;
+/** Latest release lookup cache. */
+let updateCache = null;
+
+/** @returns the locally installed plugin version, or null when unknown. */
+function pluginVersion() {
+  try {
+    const parsed = JSON.parse(readFileSync(PLUGIN_PACKAGE_PATH, 'utf8'));
+    return typeof parsed.version === 'string' ? parsed.version : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Normalize a semver-like version string.
+ * @param value - version or release tag.
+ * @returns `{text, core, pre}` or null.
+ */
+export function normalizeVersion(value) {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(String(value || '').trim());
+  if (match === null) return null;
+  return {
+    text: `${match[1]}.${match[2]}.${match[3]}${match[4] ? `-${match[4]}` : ''}`,
+    core: [Number(match[1]), Number(match[2]), Number(match[3])],
+    pre: match[4] || null,
+  };
+}
+
+/**
+ * Compare two versions numerically.
+ * @returns -1, 0 or 1, or null when either version is invalid.
+ */
+export function compareVersions(left, right) {
+  const a = normalizeVersion(left);
+  const b = normalizeVersion(right);
+  if (a === null || b === null) return null;
+  for (let index = 0; index < 3; index += 1) {
+    if (a.core[index] > b.core[index]) return 1;
+    if (a.core[index] < b.core[index]) return -1;
+  }
+  if (a.pre === null && b.pre === null) return 0;
+  if (a.pre === null) return 1;
+  if (b.pre === null) return -1;
+  if (a.pre === b.pre) return 0;
+  return a.pre > b.pre ? 1 : -1;
+}
+
+/**
+ * Fetch the latest GitHub release for this plugin.
+ * @param force - bypass the in-memory cache.
+ * @returns release facts or `{ok:false,error}`.
+ */
+async function fetchLatestRelease(force) {
+  if (force !== true && updateCache !== null && Date.now() - updateCache.at < UPDATE_CACHE_MS) {
+    return { ok: true, ...updateCache.value, cached: true };
+  }
+  const headers = {
+    'user-agent': 'dsh-madedown-update-check',
+    accept: 'application/vnd.github+json',
+  };
+  try {
+    const response = await fetch(`https://api.github.com/repos/${PLUGIN_REPO}/releases/latest`, {
+      headers,
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) {
+      if (response.status === 404) return { ok: false, error: 'no published release yet' };
+      return { ok: false, error: `GitHub responded ${response.status}` };
+    }
+    const data = await response.json();
+    const tag = typeof data.tag_name === 'string' ? data.tag_name : '';
+    const normalized = normalizeVersion(tag);
+    if (normalized === null) return { ok: false, error: 'latest release has no readable version' };
+    const value = {
+      latest: normalized.text,
+      releaseUrl: typeof data.html_url === 'string' ? data.html_url : `https://github.com/${PLUGIN_REPO}/releases`,
+      publishedAt: typeof data.published_at === 'string' ? data.published_at : null,
+      notes: typeof data.body === 'string' ? data.body.slice(0, 600) : '',
+    };
+    updateCache = { at: Date.now(), value };
+    return { ok: true, ...value };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/** @returns update status for the editor's status bar and About dialog. */
+async function checkForUpdate(force) {
+  const current = pluginVersion();
+  const release = await fetchLatestRelease(force);
+  if (!release.ok) return { ok: false, current, error: release.error };
+  const comparison = current === null ? null : compareVersions(release.latest, current);
+  return {
+    ok: true,
+    current,
+    latest: release.latest,
+    hasUpdate: comparison === 1,
+    releaseUrl: release.releaseUrl,
+    publishedAt: release.publishedAt,
+    notes: release.notes,
+  };
+}
+
+/**
+ * Run one fixed local command for the self-update flow.
+ * @returns stdout text or throws.
+ */
+function runCommand(file, args, timeout = 90000) {
+  return new Promise((resolve, reject) => {
+    execFile(file, args, { timeout, maxBuffer: 2 * 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) {
+        const detail = String(stderr || stdout || error.message || '').trim();
+        reject(new Error(detail || 'command failed'));
+        return;
+      }
+      resolve(String(stdout || '').trim());
+    });
+  });
+}
+
+/**
+ * Apply the latest release: `git pull --ff-only` for a checkout, otherwise a
+ * best-effort DSH plugin add for npm installs. The caller must restart DSH.
+ * @returns `{ok, method, version, needsRestart, output}` or error.
+ */
+async function updatePlugin() {
+  const status = await checkForUpdate(true);
+  if (!status.ok) return status;
+  if (status.hasUpdate !== true) return { ok: true, upToDate: true, current: status.current, needsRestart: false };
+  try {
+    const inside = await runCommand('git', ['-C', PLUGIN_ROOT, 'rev-parse', '--is-inside-work-tree'], 20000);
+    if (inside === 'true') {
+      const dirty = await runCommand('git', ['-C', PLUGIN_ROOT, 'status', '--porcelain'], 20000);
+      if (dirty.length > 0) return { ok: false, error: '本地有未提交的改动，无法自动更新' };
+      const output = await runCommand('git', ['-C', PLUGIN_ROOT, 'pull', '--ff-only'], 120000);
+      return { ok: true, method: 'git', version: status.latest, needsRestart: true, output };
+    }
+  } catch {
+    /* not a git checkout; fall back to npm */
+  }
+  const profile = process.env.DSH_PROFILE;
+  const dshEntry = process.argv[1];
+  if (profile && dshEntry) {
+    try {
+      const output = await runCommand(process.execPath, [dshEntry, 'plugin', '--profile', profile, 'add', `dsh-madedown@${status.latest}`], 180000);
+      return { ok: true, method: 'npm', version: status.latest, needsRestart: true, output };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+  return { ok: false, error: '当前安装方式不支持自动更新，请手动更新插件' };
+}
+
 /**
  * Show the native macOS save panel and resolve the chosen file path.
  * Falls back to `{ok:false, unsupported:true}` on non-macOS hosts so the editor
@@ -1014,6 +1176,21 @@ export function apply(ctx) {
         const saved = service.exportDocument({ docId: target.documentId, path: chosen.path });
         if (saved && saved.ok === true) saved.chosenPath = chosen.path;
         sendJson(response, 200, saved);
+      }),
+      route(`${API}/update-check`, async (request, response) => {
+        if (request.method !== 'GET') {
+          sendJson(response, 405, { ok: false, error: 'use GET' });
+          return;
+        }
+        const url = new URL(request.url || `${API}/update-check`, 'http://madedown-dsh.local');
+        sendJson(response, 200, await checkForUpdate(url.searchParams.get('force') === '1'));
+      }),
+      route(`${API}/update-plugin`, async (request, response) => {
+        if (request.method !== 'POST') {
+          sendJson(response, 405, { ok: false, error: 'use POST' });
+          return;
+        }
+        sendJson(response, 200, await updatePlugin());
       }),
       route(`${API}/open`, (request, response) => {
         if (request.method !== 'POST') {
