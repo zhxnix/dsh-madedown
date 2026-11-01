@@ -29,17 +29,21 @@ DeepSeek Harness（DSH）右侧栏的 **所见即所得 Markdown 笔记编辑器
 
 ## 安装
 
-### 从 npm（推荐）
+### 从 GitHub（当前可用）
+
+```sh
+dsh plugin --profile web add github:zhxnix/dsh-madedown
+```
+
+### 从 npm
+
+npm 包发布后可使用：
 
 ```sh
 dsh plugin --profile web add dsh-madedown@latest
 ```
 
-### 从 GitHub 源码
-
-```sh
-dsh plugin --profile web add github:zhxnix/dsh-madedown
-```
+> 目前 npm 包尚未发布；发布后 1024Store 中的条目会自动从 browse-only 变为可安装。
 
 ### 本地开发安装
 
@@ -96,7 +100,7 @@ Host 还会注册一段系统提示，列出标签并内联当前标签内容（
 ## 插件市场
 
 - GitHub 仓库已添加 `dsh-plugin` topic，dshfind 等基于 topic 聚合的 DSH 插件目录会在数据刷新后自动收录；
-- 已提交到 1024Store 插件目录（`awesome-deepseek-harness-plugins`）。
+- 已加入 1024Store 插件目录（[PR #785](https://github.com/imsai-sh/awesome-deepseek-harness-plugins/pull/785)，已合并）；npm 包发布前显示为 browse-only。
 
 ## 开发与检查
 
