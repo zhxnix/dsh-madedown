@@ -99,8 +99,12 @@ Host 还会注册一段系统提示，列出标签并内联当前标签内容（
 
 ## 插件市场
 
-- GitHub 仓库已添加 `dsh-plugin` topic，dshfind 等基于 topic 聚合的 DSH 插件目录会在数据刷新后自动收录；
-- 已加入 1024Store 插件目录（[PR #785](https://github.com/imsai-sh/awesome-deepseek-harness-plugins/pull/785)，已合并）；npm 包发布前显示为 browse-only。
+- **GitHub topic 自动索引**：已添加 `dsh-plugin` topic，dshfind、dshplugin.store、dsh-plugin.market 等基于 topic/仓库扫描的目录会在下次刷新后自动收录；
+- **dsh.so**：已通过提交检查并提交成功（0 critical, 3 warnings），条目以 Declared 状态等待同步；
+- **dsh-plugin.org**：已提交收录申请（[issue #569](https://github.com/dshplugin/dsh-plugin-hub/issues/569)）；
+- **1024Store**：已加入插件目录（[PR #785](https://github.com/imsai-sh/awesome-deepseek-harness-plugins/pull/785)，已合并）；npm 包发布前显示为 browse-only；
+- **dshbase / dshmp / 1024Store 可安装态**：基于 npm，npm 包发布后自动收录；
+- **awesome-dsh-plugin**：要求仓库创建满 1 天且提交数 ≥ 10，满足后再提交。
 
 ## 开发与检查
 
