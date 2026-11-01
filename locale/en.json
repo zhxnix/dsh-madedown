@@ -1,0 +1,8 @@
+{
+  "meta": {
+    "title": "Madedown DSH",
+    "description": "A WYSIWYG Markdown notes editor in the right sidebar: document tabs, save to local .md files, assistant read/edit tools, and two-way selection flow between chat and editor. Supports Markdown input rules such as \"# \" for headings."
+  },
+  "title": "Madedown",
+  "description": "Markdown editor shared with the conversation"
+}

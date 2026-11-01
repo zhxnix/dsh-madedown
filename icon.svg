@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Madedown">
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#2f6feb"/>
+  <path d="M15 44V21h5.6l7 10.4L34.6 21H40v23h-5.2V30.6L29 40h-1.4l-5.8-9.4V44z" fill="#fff"/>
+  <path d="M45.5 22v13.2m0 0 4.2-4.2m-4.2 4.2-4.2-4.2" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

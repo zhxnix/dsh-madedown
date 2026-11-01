@@ -1,0 +1,4 @@
+# Madedown DSH: right-sidebar markdown editor that the agent can read and edit.
+- insert:
+    - id: madedown-dsh
+      name: 'dsh-madedown'

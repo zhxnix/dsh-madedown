@@ -1,0 +1,8 @@
+{
+  "meta": {
+    "title": "Madedown DSH",
+    "description": "右侧栏的所见即所得 Markdown 笔记编辑器：多文档标签、保存为本地 .md 文件、对话可读取/修改文档，对话与编辑器选区双向发送。 支持 # + 空格等 Markdown 快捷输入。"
+  },
+  "title": "Madedown",
+  "description": "与对话联动的 Markdown 编辑器"
+}

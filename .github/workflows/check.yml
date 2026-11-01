@@ -1,0 +1,27 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install test dependencies
+        run: npm install --prefix /tmp/madedown-test react@18.3.1 react-dom@18.3.1 jsdom@24
+      - name: Syntax checks
+        run: |
+          node --check host.js
+          node --check impl.js
+          node --check client.js
+      - name: Host checks
+        run: node scripts/check-host.mjs
+      - name: Client checks
+        run: node scripts/check-client.mjs
+      - name: WYSIWYG interaction checks
+        run: node scripts/check-wysiwyg.mjs

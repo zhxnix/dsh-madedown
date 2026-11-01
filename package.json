@@ -1,0 +1,61 @@
+{
+  "name": "dsh-madedown",
+  "version": "0.6.0",
+  "description": "WYSIWYG Markdown notes editor in the DSH right sidebar: tabs, tables, code blocks, images, chat integration, local file export, and assistant read/write tools.",
+  "type": "module",
+  "license": "MIT",
+  "author": "zhxnix",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhxnix/dsh-madedown.git"
+  },
+  "homepage": "https://github.com/zhxnix/dsh-madedown#readme",
+  "bugs": {
+    "url": "https://github.com/zhxnix/dsh-madedown/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "madedown",
+    "markdown",
+    "wysiwyg",
+    "editor",
+    "sidebar",
+    "notes",
+    "cordis"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./host.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "host.js",
+    "impl.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}

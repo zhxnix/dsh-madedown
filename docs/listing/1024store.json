@@ -1,0 +1,20 @@
+{
+  "$schema": "../schema/plugin.schema.json",
+  "id": "zhxnix/dsh-madedown",
+  "name": "dsh-madedown",
+  "repository": "https://github.com/zhxnix/dsh-madedown",
+  "category": "ui",
+  "description": {
+    "en": "WYSIWYG Markdown notes editor in the DSH right sidebar, with assistant read/write tools, tabs, images, and local file export.",
+    "zh": "DSH 右侧栏的所见即所得 Markdown 笔记编辑器，支持模型读写、多标签、图片与保存到本地文件。"
+  },
+  "added": "__DATE__"
+}
+EOF
+python3 - <<'PY'
+import json, datetime
+date=datetime.date.today().isoformat()
+p='docs/listing/1024store.json'
+s=open(p,encoding='utf-8').read().replace('__DATE__',date)
+open(p,'w',encoding='utf-8').write(s)
+print('listing date',date)

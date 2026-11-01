@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tgz
+*.log
+.DS_Store
+coverage/
+tmp/
+playwright-report/
+test-results/
+# Local editor data created by running DSH with this plugin
+madedown-dsh-data/
