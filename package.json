@@ -1,6 +1,6 @@
 {
   "name": "dsh-madedown",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "WYSIWYG Markdown notes editor in the DSH right sidebar: tabs, tables, code blocks, images, chat integration, local file export, and assistant read/write tools.",
   "type": "module",
   "license": "MIT",

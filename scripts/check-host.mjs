@@ -225,6 +225,13 @@ assert.equal(localActive.localPath, outPath, 'export records the local save path
 assert.equal(typeof localActive.localSavedAt, 'string', 'export records the local save timestamp');
 const localPayload = await call({ action: 'read', document: initial.documentId });
 assert.equal(localPayload.localPath, outPath, 'document payload exposes the local save path');
+
+// Reloading the service from disk must keep the local-save metadata.
+const dataFile = localList.dataFile;
+assert.equal(typeof dataFile, 'string');
+const reloadedService = createMadedownService(dataFile);
+const reloadedDoc = reloadedService.snapshot().docs.find((entry) => entry.id === initial.documentId);
+assert.equal(reloadedDoc.localPath, outPath, 'local save path survives a host restart');
 assert.equal(existsSync(outPath), true);
 assert.match(readFileSync(outPath, 'utf8'), /# Legacy/);
 assert.match(readFileSync(outPath, 'utf8'), /agent appended/);

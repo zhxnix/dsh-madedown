@@ -94,6 +94,8 @@ function sanitizeDocument(value, index) {
     updatedAt: timestamp,
     updatedBy: typeof source.updatedBy === 'string' ? source.updatedBy : 'system',
     rev: Number.isSafeInteger(source.rev) && source.rev >= 0 ? source.rev : 0,
+    localPath: typeof source.localPath === 'string' && source.localPath.length > 0 ? source.localPath : null,
+    localSavedAt: typeof source.localSavedAt === 'string' ? source.localSavedAt : null,
   };
 }
 
@@ -108,6 +110,8 @@ function emptyDocument(title) {
     updatedAt: timestamp,
     updatedBy: 'system',
     rev: 0,
+    localPath: null,
+    localSavedAt: null,
   };
 }
 

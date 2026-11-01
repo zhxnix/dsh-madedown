@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.3
+
+- Fix: a locally saved document showed as "not saved locally" after a page refresh or plugin reload. `localPath` / `localSavedAt` are now preserved when the document store is loaded from disk.
+
 ## 0.6.2
 
 - The About dialog can check the latest GitHub release and update the plugin to it (git checkout: fast-forward pull; npm installs: best-effort `dsh plugin add`; a restart is required).
